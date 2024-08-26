@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -14,6 +15,7 @@ type TimetasticClient struct {
 }
 
 func NewTimetasticClient() *TimetasticClient {
+	fmt.Println("The timetastic client requires you to be logged in to Timetastic in Chrome, and will request permission to access your cookies.")
 	cookies, err := authentication.GetTimetasticCookiesFromChrome()
 	if err != nil {
 		slog.Error("Failed to get cookies", "error", err)

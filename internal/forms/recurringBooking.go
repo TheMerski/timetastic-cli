@@ -34,7 +34,7 @@ type doneMsg struct {
 }
 
 func (r resultMsg) String() string {
-	return fmt.Sprintf("%s %s %s", r.date, r.result,
+	return fmt.Sprintf("%s %s, %s", r.date, r.result,
 		r.message)
 }
 
@@ -85,7 +85,7 @@ func (m model) View() string {
 	var s string
 
 	if m.quitting {
-		s += "You're all set! Created " + fmt.Sprintf("%d", m.created) + " bookings."
+		s += "You're all set! Handled " + fmt.Sprintf("%d", m.created) + " bookings."
 	} else {
 		s += m.spinner.View() + " Creating bookings..."
 	}
@@ -142,10 +142,15 @@ func BookRecurringLeave(client *api.TimetasticClient, department int, leaveType 
 			date = date.AddDate(0, 0, 7*data.WeeksToAdd)
 			count++
 
+			resMessage := "Created successfully"
+			if !res.Success {
+				resMessage = "Failed to create"
+			}
+
 			// Send the Bubble Tea program a message from outside the
 			// tea.Program. This will block until it is ready to receive
 			// messages.
-			p.Send(resultMsg{date.Format(time.DateOnly), fmt.Sprintf("Created: %t", res.Success), res.Response})
+			p.Send(resultMsg{date.Format(time.DateOnly), resMessage, res.Response})
 		}
 		p.Send(doneMsg{created: count})
 	}()
