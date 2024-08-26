@@ -27,10 +27,12 @@ type resultMsg struct {
 	date    string
 	result  string
 	message string
+	success bool
 }
 
 type doneMsg struct {
-	created int
+	success int
+	failed  int
 }
 
 func (r resultMsg) String() string {
@@ -39,10 +41,12 @@ func (r resultMsg) String() string {
 }
 
 type model struct {
-	spinner  spinner.Model
-	results  []resultMsg
-	quitting bool
-	created  int
+	spinner       spinner.Model
+	results       []resultMsg
+	failedResults []resultMsg
+	quitting      bool
+	succeed       int
+	failed        int
 }
 
 func newModel() model {
@@ -50,9 +54,11 @@ func newModel() model {
 	s := spinner.New()
 	s.Style = spinnerStyle
 	return model{
-		spinner: s,
-		results: make([]resultMsg, numLastResults),
-		created: 0,
+		spinner:       s,
+		results:       make([]resultMsg, numLastResults),
+		failedResults: make([]resultMsg, 5),
+		succeed:       0,
+		failed:        0,
 	}
 }
 
@@ -67,10 +73,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case doneMsg:
 		m.quitting = true
-		m.created = msg.created
+		m.succeed = msg.success
+		m.failed = msg.failed
 		return m, tea.Quit
 	case resultMsg:
 		m.results = append(m.results[1:], msg)
+		if !msg.success {
+			m.failedResults = append(m.failedResults, msg)
+		}
 		return m, nil
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -84,12 +94,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	var s string
 
-	if m.quitting {
-		s += "You're all set! Handled " + fmt.Sprintf("%d", m.created) + " bookings."
-	} else {
-		s += m.spinner.View() + " Creating bookings..."
-	}
-
 	s += "\n\n"
 
 	for _, res := range m.results {
@@ -101,7 +105,16 @@ func (m model) View() string {
 	}
 
 	if m.quitting {
-		s += "\n"
+		s = "You're all set!\n\n"
+		s += fmt.Sprintf("Successfully created %d bookings\n", m.succeed)
+		s += fmt.Sprintf("Failed to create %d bookings:\n", m.failed)
+		for _, res := range m.results {
+			if res.result == "Failed to create" {
+				s += "\t" + res.String() + "\n"
+			}
+		}
+	} else {
+		s += m.spinner.View() + " Creating bookings..."
 	}
 
 	return appStyle.Render(s)
@@ -110,6 +123,7 @@ func (m model) View() string {
 func BookRecurringLeave(client *api.TimetasticClient, department int, leaveType int, data CreationData) {
 	p := tea.NewProgram(newModel())
 	date, err := time.Parse(time.DateOnly, data.StartDate)
+	slog.Info("Starting bookings", "start", date, "startDay", date.Weekday(), "end", data.EndDate, "weeksToAdd", data.WeeksToAdd, "weeksToCreate", data.WeeksToCreate)
 	if err != nil {
 		slog.Error("Failed to parse start date, returning", "error", err)
 		return
@@ -129,30 +143,34 @@ func BookRecurringLeave(client *api.TimetasticClient, department int, leaveType 
 			return
 		}
 	}
-	count := 0
+	successCount := 0
+	failedCount := 0
 
 	go func() {
-		for date.Before(endDate) {
+		for date.Before(endDate) || date.Equal(endDate) {
+			slog.Info("Creating bookings", "start", date, "startDay", date.Weekday(), "end", data.EndDate, "weeksToAdd", data.WeeksToAdd, "weeksToCreate", data.WeeksToCreate)
 			// Book leave
 			res, err := client.BookLeave(department, leaveType, date.Format(time.DateOnly), date.Format(time.DateOnly))
 			if err != nil {
 				fmt.Println("Error booking leave:", err)
 				continue
 			}
-			date = date.AddDate(0, 0, 7*data.WeeksToAdd)
-			count++
-
 			resMessage := "Created successfully"
 			if !res.Success {
 				resMessage = "Failed to create"
+				failedCount++
+			} else {
+				successCount++
 			}
-
 			// Send the Bubble Tea program a message from outside the
 			// tea.Program. This will block until it is ready to receive
 			// messages.
-			p.Send(resultMsg{date.Format(time.DateOnly), resMessage, res.Response})
+			p.Send(resultMsg{date.Format(time.DateOnly), resMessage, res.Response, res.Success})
+
+			// Move to the next date to book
+			date = date.AddDate(0, 0, 7*data.WeeksToAdd)
 		}
-		p.Send(doneMsg{created: count})
+		p.Send(doneMsg{success: successCount, failed: failedCount})
 	}()
 
 	if _, err := p.Run(); err != nil {
