@@ -13,19 +13,14 @@ func BookRecurringLeave(client *api.TimetasticClient) {
 		slog.Error("Failed to get departments", "error", err)
 		return
 	}
-	department := forms.SelectDepartment(*dep)
-	slog.Debug("Got department", "departmentId", department)
-
 	leaves, err := client.GetLeaveTypes()
 	if err != nil {
 		slog.Error("Failed to get departments", "error", err)
 		return
 	}
-	leaveType := forms.SelectLeaveType(*leaves)
-	slog.Debug("Got leave type", "leaveTypeId", leaveType)
 
-	when := forms.WhenToCreate()
-	forms.BookRecurringLeave(client, department, leaveType, when)
+	recurringBookingData := forms.RecurringBookingForm(*dep, *leaves)
+	forms.BookRecurringLeave(client, recurringBookingData)
 
 	slog.Debug("Booked all leaves")
 }

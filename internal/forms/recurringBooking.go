@@ -120,10 +120,10 @@ func (m model) View() string {
 	return appStyle.Render(s)
 }
 
-func BookRecurringLeave(client *api.TimetasticClient, department int, leaveType int, data CreationData) {
+func BookRecurringLeave(client *api.TimetasticClient, data RecurringCreationData) {
 	p := tea.NewProgram(newModel())
 	date, err := time.Parse(time.DateOnly, data.StartDate)
-	slog.Info("Starting bookings", "start", date, "startDay", date.Weekday(), "end", data.EndDate, "weeksToAdd", data.WeeksToAdd, "weeksToCreate", data.WeeksToCreate)
+	slog.Debug("Starting to book recurring leave", "start", date, "end", data.EndDate, "weeks", data.WeeksToCreate, "data", data)
 	if err != nil {
 		slog.Error("Failed to parse start date, returning", "error", err)
 		return
@@ -148,12 +148,10 @@ func BookRecurringLeave(client *api.TimetasticClient, department int, leaveType 
 
 	go func() {
 		for date.Before(endDate) || date.Equal(endDate) {
-			slog.Info("Creating bookings", "start", date, "startDay", date.Weekday(), "end", data.EndDate, "weeksToAdd", data.WeeksToAdd, "weeksToCreate", data.WeeksToCreate)
 			// Book leave
-			res, err := client.BookLeave(department, leaveType, date.Format(time.DateOnly), date.Format(time.DateOnly))
+			res, err := client.BookLeave(data.DepartmentID, data.LeaveTypeID, date.Format(time.DateOnly), date.Format(time.DateOnly))
 			if err != nil {
 				fmt.Println("Error booking leave:", err)
-				continue
 			}
 			resMessage := "Created successfully"
 			if !res.Success {

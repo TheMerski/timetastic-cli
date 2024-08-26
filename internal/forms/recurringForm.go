@@ -6,9 +6,12 @@ import (
 	"time"
 
 	"github.com/charmbracelet/huh"
+	"github.com/themerski/timetastic-cli/internal/api"
 )
 
-type CreationData struct {
+type RecurringCreationData struct {
+	DepartmentID  int
+	LeaveTypeID   int
 	Day           time.Weekday
 	StartDate     string
 	EndDate       *string
@@ -16,11 +19,13 @@ type CreationData struct {
 	WeeksToAdd    int
 }
 
-func WhenToCreate() CreationData {
+func RecurringBookingForm(departments []api.DepartmentResponse, leavetypes []api.LeaveType) RecurringCreationData {
 	var endDate string
-	var data CreationData
+	var data RecurringCreationData
 
 	form := huh.NewForm(
+		GetDepartmentGroup(departments, &data.DepartmentID),
+		GetLeaveTypesGroup(leavetypes, &data.LeaveTypeID),
 		huh.NewGroup(
 			huh.NewSelect[time.Weekday]().
 				Title("For which day do you want to create an entry").
@@ -47,6 +52,7 @@ func WhenToCreate() CreationData {
 				Title("From which date do you want to start").
 				Prompt("?").
 				Validate(validateDate).
+				Suggestions([]string{time.Now().Format(time.DateOnly)}).
 				Value(&data.StartDate),
 		),
 		huh.NewGroup(
