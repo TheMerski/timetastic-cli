@@ -14,7 +14,12 @@ type TimetasticClient struct {
 }
 
 func NewTimetasticClient() *TimetasticClient {
-	cookies := authentication.GetTimetasticCookiesFromChrome()
+	cookies, err := authentication.GetTimetasticCookiesFromChrome()
+	if err != nil {
+		slog.Error("Failed to get cookies", "error", err)
+		return nil
+	}
+
 	userData, err := authentication.GetUserData(cookies)
 	if err != nil {
 		slog.Error("Failed to get user data", "error", err)
