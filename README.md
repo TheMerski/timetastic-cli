@@ -17,7 +17,7 @@ Pre-requisites:
 Installing:
 
 ```bash
-go install github.com/TheMerski/timetastic-cli/timetastic@latest
+go install github.com/themerski/timetastic-cli/timetastic@latest
 ```
 
 Using the CLI:
