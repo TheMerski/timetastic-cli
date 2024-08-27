@@ -13,6 +13,7 @@ Timetastic has no way to create recurring leaves in your calendar, this cli tool
 
 Pre-requisites:
 - [Go](https://go.dev/doc/install)
+- Timetastic logged in on chrome
 
 Installing:
 
