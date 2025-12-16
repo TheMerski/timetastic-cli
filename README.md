@@ -1,11 +1,18 @@
 # timetastic cli
 
+> [!NOTE]
+> Archived due to issues getting the cookie lib to work consistently without giving issues on MacOS.
+
 > [!WARNING]
 > This tool uses cookies from your local chrome browser to hijack your timetastic session, please make sure to validate how your cookies are being used yourself before running it!
 
 > [!NOTE]
 > this tool uses unsupported reverse engineered api's.<br>
 > So be warned! It might break at any point in time.
+
+## CLI Features
+
+- Planning weekly or bi-weekly recurring events using `timetastic recurring`
 
 ## Using the CLI
 
